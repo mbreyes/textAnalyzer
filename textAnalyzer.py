@@ -88,20 +88,25 @@ def criaVetor(texto):
 
 # Lendo arquivos com informações de disciplina (catálogo e disciplina nova)
 catalogo = list(csv.reader(open(filename,     'r'), delimiter='\t'))
-novaDisc = list(csv.reader(open(fileDiscNova, 'r'), delimiter='\t'))
 
-catalogo = catalogo[1:]
-novaDisc = novaDisc[1:]
+# Verificando se há um arquivo de disciplina nova
+existeNovaDisc = True
+try:
+    novaDisc = list(csv.reader(open(fileDiscNova, 'r'), delimiter='\t'))
+except IOError:
+    print("Arquivo não encontrado:", fileDiscNova)
+    print('Continuando com a comparação entre todas as disciplinas do catálogo','\n\n')
+    existeNovaDisc = False
 
-# Colocando a nova disciplina na primeira linha do catálogo
-catalogo = np.vstack((novaDisc,catalogo))
+catalogo = catalogo[1:]      # elimina primeira linha (cabeçalho)
+
+if existeNovaDisc:   # se há um arquivo com discplina nova
+    print('Arquivo com nova disciplina lido')
+    novaDisc = novaDisc[1:]                   # elimina cabeçalho
+    catalogo = np.vstack((novaDisc,catalogo)) # Coloca nova disc na primeira linha do catálogo
 
 # Aqui juntamos o texto de todas as ementas e colocamos num único string, para saber todas as palavras usadas
 todasEmentas=''
-len(catalogo)
-
-# Incluindo a disciplina nova como primeira disciplina 
-#todasEmentas = todasEmentas + ' ' + novaDisc[0][colEmenta] + ' ' + novaDisc[0][colBibliB]
 
 # Agora incluindo as demais disciplinas do catálogo
 for k in range(0,len(catalogo)):
@@ -214,8 +219,10 @@ sobrepostas.
 # Deixando o código abaixo, caso se queira ordenar pelo coeficiente 2 (coef2)
 #aux = np.array([[I[k],J[k], float(M[I[k],J[k]])/float(min(M[I[k],I[k]],M[J[k],J[k]])) ] for k in range(I.size) ])
 
-aux = np.array([[I[k],J[k], float(M[I[k],J[k]])/float(min(M[I[k],I[k]],M[J[k],J[k]])) ] for k in range(I.size) if I[k]==0])
-
+if existeNovaDisc:
+    aux = np.array([[I[k],J[k], float(M[I[k],J[k]])/float(min(M[I[k],I[k]],M[J[k],J[k]])) ] for k in range(I.size) if I[k]==0])
+else:
+    aux = np.array([[I[k],J[k], float(M[I[k],J[k]])/float(min(M[I[k],I[k]],M[J[k],J[k]])) ] for k in range(I.size) ])
 
 aux = aux[aux[:,2].argsort(),]             # ordena o vetor
 aux = aux[::-1,]                           # coloca o vetor em ordem reversa (de maior sobreposição para menor)
@@ -276,9 +283,14 @@ for k in range(len(I)):                                # loop para cada discipli
         print('\n','_________________________________________','\n\n') 
 
 
-# In[10]:
+# In[13]:
 
 #f = open('pares.txt', 'w')
+if existeNovaDisc:
+            print('Disciplina nova:')
+            print(catalogo[0][colSigla],catalogo[0][colNome],'\n')
+            print('Disciplinas semelhantes:')
+        
 for k in range(len(I)):                                # loop para cada disciplina
 
     # --- Calculando o coeficiente de sobreposição ---
@@ -293,10 +305,22 @@ for k in range(len(I)):                                # loop para cada discipli
         
         # --- Imprimindo os coeficientes na tela para informação ---
         #print('Sobreposição = ',int(round(coef*100)),'%\t', 'Sobreposição 2 = ', int(round(coef2*100)),'%')
-        print(int(coef2*100),'% ',              #catalogo[I[k]][colSigla],catalogo[I[k]][colNome],\
-              catalogo[J[k]][colSigla],catalogo[J[k]][colNome],sep='\t')
+        if existeNovaDisc:
+            #print('Disciplina nova:')
+            #print(catalogo[0][colSigla],catalogo[0][colNome])
+            #print('Disciplinas semelhantes:')
+            print(int(coef2*100),'% ',                  catalogo[J[k]][colSigla],catalogo[J[k]][colNome],sep='\t')
+        else:
+            print(int(coef2*100),'% ',                  catalogo[I[k]][colSigla],catalogo[I[k]][colNome],                  catalogo[J[k]][colSigla],catalogo[J[k]][colNome],sep='\t')
+
+            
         #print(str(line),sep='\t')
         #f.write(str(line))
 # Fechando o arquivo
 #f.close()
+
+
+# In[ ]:
+
+
 
