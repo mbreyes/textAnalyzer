@@ -15,7 +15,8 @@ import string
 import csv
 import numpy as np
 import time
-from nltk.stem import RSLPStemmer
+import sys
+#from nltk.stem import RSLPStemmer
 
 
 # Primeiramente obtitve o catálogo de disciplinas em formato excel, gentilmente fornecido pela Prof. Paula Tiba e sua equipe da Pró-Reitoria de Graduação. Exportei para formato csv, colocando como delimitador de campo "tab". O nome do arquivo é 
@@ -84,29 +85,36 @@ def criaVetor(texto):
     return vetor
 
 
-# In[3]:
+# In[17]:
 
-# Lendo arquivos com informações de disciplina (catálogo e disciplina nova)
-catalogo = list(csv.reader(open(filename,     'r'), delimiter='\t'))
-
-# Verificando se há um arquivo de disciplina nova
-existeNovaDisc = True
+# Lendo arquivos com informações do catálogo
 try:
-    novaDisc = list(csv.reader(open(fileDiscNova, 'r'), delimiter='\t'))
+    catalogo = list(csv.reader(open(filename,     'r'), delimiter='\t'))  # le arquivo do catálog
+    print('Arquivo do catálogo de disciplinas lido') # mostra mensagem na tela avisando que arquivo foi lido
+    catalogo = catalogo[1:]      # elimina primeira linha (cabeçalho)
+    print(len(catalogo), 'disciplinas lidas','\n\n')
+except IOError:
+    print("Arquivo não encontrado:", filename)
+    print('Impossível realizar comparações')    
+    print('Abortando operação','\n\n')
+    sys.exit()
+    
+# Verificando se há um arquivo de disciplina nova
+try:
+    novaDisc = list(csv.reader(open(fileDiscNova, 'r'), delimiter='\t'))   # le arquivo csv em disco
+    existeNovaDisc = True      # se conseguiu ler, coloca a flag como TRUE
+    print('Arquivo com nova disciplina lido') # mostra mensagem na tela avisando que arquivo foi lido
+    novaDisc = novaDisc[1:]                   # elimina primeira linha (cabeçalho)
+    catalogo = np.vstack((novaDisc,catalogo)) # Coloca nova disc na primeira linha do catálogo
+    print('Disciplina nova ==>',novaDisc[0][colNome],'\n\n')
+    
 except IOError:
     print("Arquivo não encontrado:", fileDiscNova)
     print('Continuando com a comparação entre todas as disciplinas do catálogo','\n\n')
     existeNovaDisc = False
-
-catalogo = catalogo[1:]      # elimina primeira linha (cabeçalho)
-
-if existeNovaDisc:   # se há um arquivo com discplina nova
-    print('Arquivo com nova disciplina lido')
-    novaDisc = novaDisc[1:]                   # elimina cabeçalho
-    catalogo = np.vstack((novaDisc,catalogo)) # Coloca nova disc na primeira linha do catálogo
-
-# Aqui juntamos o texto de todas as ementas e colocamos num único string, para saber todas as palavras usadas
-todasEmentas=''
+ 
+#Aqui juntamos o texto de todas as ementas e colocamos num único string, para saber todas as palavras usadas
+todasEmentas='' # inicia string sem nada guardado 
 
 # Agora incluindo as demais disciplinas do catálogo
 for k in range(0,len(catalogo)):
@@ -124,13 +132,15 @@ todasEmentasLimpo = limpaTexto(todasEmentas,stopWords)
 # !!!Bastante demorado!!!! 
 # pode levar até 5 minutos para rodar.
 
-# In[4]:
+# In[5]:
 
+print('Criando dicionário com as palavras de todas as ementas')
 allPairs  = criaVetor(todasEmentasLimpo)
 sortPairs = sortFreqDict(allPairs)                    # usa a função definida no início para ordenar em ordem decrescente
+print('Dicinário terminado','\n\n')
 
 
-# In[5]:
+# In[6]:
 
 emptyPairs = {}                 # inicia variável
 for aux in allPairs.keys():     # loop para todas as palavras
@@ -138,7 +148,7 @@ for aux in allPairs.keys():     # loop para todas as palavras
                                 # mas com contagem zero
 
 
-# In[6]:
+# In[7]:
 
 #Por curiosidade, vamos visualizar as palavras mais frequentes
 #for k in range(ELIM_MOST_FREQ+1):
@@ -160,7 +170,7 @@ for k in range(ELIM_MOST_FREQ):               # loop for the number of words to 
 # 
 # Fazendo os vetores idênticos, podemos criar uma matriz "empilhando" os vetores somente do número de entradas. Com isso, criamos uma matriz onde cada linha é o vetor de cada ementa do catálogo. As entradas da matriz V[i,j] são o número de occorrências de palavra[j] na ementa[i], para j indo da primeira à última palavra de todo o catálogo e i indo de 1 até o número de disciplinas.
 
-# In[7]:
+# In[8]:
 
 V = np.zeros((len(catalogo), len(emptyPairs)),dtype=int)    # inicia o vetor com o tamanho adequado (número de ementas)
 l = len(emptyPairs)                                         # guarda o valor do número de palavras total do catálogo
@@ -187,7 +197,7 @@ for k in range(0,len(catalogo)):                           # loop para cada disc
         s1 = set(vetorCompleto.keys())                      # joga todas as palavras dessa disciplina em um conjunto (set)
         s2 = set(allPairs.keys())                           # joga todas as palavras de todas as disciplinas em um set
         s1.difference_update(s2)                            # identifica qual é a palavra diferente guarda em s1
-        for aux in s1:                                     # for para todas essas palavras
+        for aux in s1:                                      # for para todas essas palavras
             del vetorCompleto[aux]                          # apaga as entradas do dicionário dessa disciplina 
 
     type(vetorCompleto)
@@ -199,7 +209,7 @@ M = np.inner(V,V)       # multiplica a matriz V pela transposta (V'), de forma a
                         # da sobreposição entre eles.
 
 
-# In[8]:
+# In[9]:
 
 '''
 Nesse ponto, temos uma matriz simétrica M[i,j] onde cada entrada é o produto escalar entre a disciplina[i]
@@ -238,8 +248,9 @@ J = [int(j) for j in J]                    # converte a lista para uma lista de 
 # # Gerando lista com ementas em ordem de semelhança
 # * Observação:foram eliminadas as disciplinas que contém as palavras: estágio, trabalho, tcc etc (ver código abaixo). Isso é para eliminar as disciplinas como trabalho de graduação
 
-# In[9]:
+# In[10]:
 
+print('Gerando lista com ementas em ordem decrescente de semelhança')
 for k in range(len(I)):                                # loop para cada disciplina
 
     # --- Calculando o coeficiente de sobreposição ---
@@ -283,7 +294,7 @@ for k in range(len(I)):                                # loop para cada discipli
         print('\n','_________________________________________','\n\n') 
 
 
-# In[13]:
+# In[11]:
 
 #f = open('pares.txt', 'w')
 if existeNovaDisc:
